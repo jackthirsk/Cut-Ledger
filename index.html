@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Cut Ledger</title>
+
+<!-- PWA / Add to Home Screen -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F06E1D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cut Ledger">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<style>
+  :root{
+    --cream:#FDF5EB;
+    --orange:#F58B44;
+    --bright:#F06E1D;
+    --black:#000000;
+    --paper:#FFFFFF;
+    --line:#E7D9C4;
+    --line-soft:#F0E5D3;
+    --font-display: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Consolas', 'Menlo', 'Courier New', monospace;
+    --font-body: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--black);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--bright);
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  h1.title{
+    font-family:var(--font-display);
+    font-size:38px;
+    line-height:1;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{
+    font-size:14px;
+    color:#3a3a3a;
+    margin:0 0 24px;
+  }
+  .weeknav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:16px;
+  }
+  .weeknav button{
+    background:none;
+    border:none;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--black);
+    cursor:pointer;
+    padding:6px 10px;
+    border-radius:6px;
+  }
+  .weeknav button:hover{ background:var(--line-soft); }
+  .weeknav button:disabled{ opacity:0.35; cursor:default; }
+  .weeknav button:disabled:hover{ background:none; }
+  .weeklabel{
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.02em;
+  }
+  .daytabs{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:6px;
+    margin-bottom:18px;
+  }
+  .daytab{
+    position:relative;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 4px 12px;
+    text-align:center;
+    cursor:pointer;
+    font-family:var(--font-mono);
+    transition:transform 0.08s ease;
+  }
+  .daytab:hover{ transform:translateY(-1px); }
+  .daytab.active{
+    border-color:var(--bright);
+    box-shadow:0 0 0 2px rgba(240,110,29,0.15) inset;
+  }
+  .daytab .dname{
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#6b6b6b;
+    display:block;
+    margin-bottom:3px;
+  }
+  .daytab .dnum{
+    font-size:16px;
+    font-weight:600;
+    display:block;
+  }
+  .dot{
+    width:6px;height:6px;border-radius:50%;
+    margin:6px auto 0;
+    background:var(--line);
+  }
+  .dot.partial{ background:var(--orange); }
+  .dot.full{ background:var(--bright); }
+  .stampmini{
+    position:absolute;
+    top:-6px;right:-6px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--bright);
+    color:#fff;
+    font-size:10px;
+    display:flex;align-items:center;justify-content:center;
+    transform:rotate(-10deg);
+    font-family:var(--font-mono);
+  }
+
+  .panel{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 22px 8px;
+    margin-bottom:18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .panel .daytitle{
+    font-family:var(--font-display);
+    font-size:22px;
+    margin:0 0 2px;
+  }
+  .panel .dayplan{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--bright);
+    margin:0 0 18px;
+    font-weight:600;
+  }
+  .workoutswap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .workoutselect{
+    font-family:var(--font-display);
+    font-size:15px;
+    color:var(--black);
+    background:var(--cream);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    cursor:pointer;
+    max-width:100%;
+  }
+  .workoutselect:focus{ outline:2px solid var(--orange); outline-offset:1px; }
+  .swapbadge{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:#9a9188;
+    background:var(--line-soft);
+    padding:3px 7px;
+    border-radius:5px;
+  }
+  .stamp{
+    position:absolute;
+    top:18px; right:18px;
+    border:3px double var(--bright);
+    color:var(--bright);
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:0.12em;
+    padding:6px 10px;
+    transform:rotate(-9deg);
+    border-radius:4px;
+    pointer-events:none;
+    opacity:0.9;
+  }
+
+  .section-label{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:#6b6b6b;
+    margin:18px 0 8px;
+    border-top:1px solid var(--line-soft);
+    padding-top:14px;
+  }
+  .section-label:first-of-type{ border-top:none; padding-top:0; margin-top:4px;}
+
+  .weightrow{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .weightrow input[type=number]{
+    font-family:var(--font-mono);
+    font-size:20px;
+    font-weight:600;
+    width:100px;
+    padding:6px 8px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--cream);
+    color:var(--black);
+  }
+  .weightrow input[type=number]:focus{ outline:2px solid var(--orange); outline-offset:1px; }
+  .weightunit{ font-family:var(--font-mono); font-size:13px; color:#6b6b6b; }
+  .trend{ font-family:var(--font-mono); font-size:12px; color:#6b6b6b; }
+  .trend.down{ color:#4d7c3a; }
+  .trend.up{ color:var(--bright); }
+
+  .exerciseblock{
+    margin:2px 0 8px 34px;
+    padding:8px 10px;
+    background:var(--cream);
+    border:1px solid var(--line-soft);
+    border-radius:10px;
+  }
+  .exerciserow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:7px 0;
+    border-bottom:1px dashed var(--line);
+    flex-wrap:wrap;
+  }
+  .exerciserow:last-child{ border-bottom:none; }
+  .exercisemeta{ flex:1; min-width:120px; }
+  .exercisename{ font-size:12.5px; font-weight:600; }
+  .exercisetarget{ font-family:var(--font-mono); font-size:10.5px; color:#6b6b6b; }
+  .exerciseinputs{ display:flex; align-items:center; gap:5px; }
+  .liftinput{
+    font-family:var(--font-mono);
+    font-size:12px;
+    width:46px;
+    padding:5px 6px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--black);
+    text-align:center;
+  }
+  .liftinput:focus{ outline:2px solid var(--orange); outline-offset:1px; }
+  .liftx{ font-family:var(--font-mono); font-size:11px; color:#6b6b6b; }
+  .liftlast{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:#9a9188;
+    width:100%;
+    margin-top:2px;
+  }
+
+  .checklist{ display:flex; flex-direction:column; gap:2px; }
+  .item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 4px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .item:hover{ background:var(--line-soft); }
+  .box{
+    flex:0 0 20px;
+    width:20px;height:20px;
+    border:2px solid var(--black);
+    border-radius:5px;
+    margin-top:1px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--paper);
+  }
+  .item.checked .box{ background:var(--bright); border-color:var(--bright); }
+  .box svg{ width:12px;height:12px; opacity:0; }
+  .item.checked .box svg{ opacity:1; }
+  .itemtext{ flex:1; }
+  .itemtitle{ font-size:14px; font-weight:600; }
+  .item.checked .itemtitle{ text-decoration:line-through; opacity:0.55; }
+  .itemsub{ font-size:12.5px; color:#6b6b6b; margin-top:1px; }
+  .item.checked .itemsub{ opacity:0.55; }
+  .swaprow{ margin-top:6px; }
+  .swapselect{
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--bright);
+    background:var(--cream);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:4px 8px;
+    cursor:pointer;
+    max-width:100%;
+  }
+  .swapselect:focus{ outline:2px solid var(--orange); outline-offset:1px; }
+  .item.checked .swapselect{ opacity:0.55; }
+
+  textarea{
+    width:100%;
+    min-height:56px;
+    font-family:var(--font-body);
+    font-size:13px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px;
+    background:var(--cream);
+    color:var(--black);
+    resize:vertical;
+    margin-top:6px;
+  }
+  textarea:focus{ outline:2px solid var(--orange); outline-offset:1px; }
+
+  .footerrow{
+    display:grid;
+    grid-template-columns:1fr 1.4fr;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+  }
+  .streaknum{
+    font-family:var(--font-display);
+    font-size:44px;
+    color:var(--bright);
+    line-height:1;
+  }
+  .cardlabel{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:#6b6b6b;
+    margin-top:6px;
+  }
+  .sparkwrap{ display:flex; flex-direction:column; height:100%; }
+  .sparkfoot{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:#6b6b6b;
+    display:flex;
+    justify-content:space-between;
+    margin-top:4px;
+  }
+
+  .resetrow{ text-align:center; margin-top:6px; }
+  .resetrow button{
+    background:none;
+    border:none;
+    color:#9a9188;
+    font-family:var(--font-mono);
+    font-size:11px;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .loading{
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:#6b6b6b;
+    padding:40px 0;
+    text-align:center;
+  }
+  @media (max-width:520px){
+    h1.title{ font-size:30px; }
+    .footerrow{ grid-template-columns:1fr; }
+    .daytab .dname{ font-size:9px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="loading">Loading your ledger&hellip;</div>
+</div>
+
+<script>
+// Standalone storage shim — mirrors the Claude artifact storage API
+// (get/set/delete/list) but persists to this device's localStorage instead.
+// This makes the app fully self-contained with no backend required.
+window.storage = {
+  get: async (key) => {
+    const v = localStorage.getItem(key);
+    if (v === null) throw new Error('not found');
+    return { key, value: v, shared: false };
+  },
+  set: async (key, value) => {
+    localStorage.setItem(key, value);
+    return { key, value, shared: false };
+  },
+  delete: async (key) => {
+    localStorage.removeItem(key);
+    return { key, deleted: true, shared: false };
+  },
+  list: async (prefix) => {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!prefix || k.startsWith(prefix)) keys.push(k);
+    }
+    return { keys, prefix, shared: false };
+  },
+};
+
+// Register service worker for offline support (best-effort; app still works without it)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<script>
+const BREAKFAST_OPTIONS = [
+  { label:'Oats, protein & blueberries', detail:'75g oats (dry); 1 scoop (35g) Bulk vegan vanilla protein; 1 tbsp honey; 100g blueberries', p:35, f:7, c:80 },
+  { label:'Eggs & oats', detail:'3 whole eggs + 3 egg whites, scrambled; 40g oats (dry); 100g berries', p:40, f:12, c:45 },
+];
+const LUNCH_OPTIONS = [
+  { label:'Chicken & rice', detail:'180g chicken breast (raw, ~135g cooked), grilled; 150g white rice (cooked); large salad + 1 tbsp olive oil', p:48, f:15, c:60 },
+  { label:'Turkey & couscous', detail:'180g turkey breast (raw, ~135g cooked), grilled; 150g couscous (cooked); roasted peppers & courgette', p:48, f:15, c:60 },
+  { label:'Prawns & noodles', detail:'180g prawns (raw, ~153g cooked), stir-fried; 150g noodles (cooked); mixed peppers & pak choi', p:48, f:15, c:60 },
+  { label:'Chicken thigh & quinoa', detail:'180g skinless chicken thigh (raw, ~130g cooked), grilled; 150g quinoa (cooked); mixed salad', p:48, f:15, c:60 },
+  { label:'Cod/haddock & rice', detail:'180g cod or haddock (raw, ~144g cooked), baked; 150g white rice (cooked); tenderstem broccoli', p:48, f:15, c:60 },
+];
+const DINNER_OPTIONS = [
+  { label:'White fish & potatoes', detail:'200g white fish (raw, ~160g cooked); 250g potatoes (cooked); steamed broccoli', p:45, f:8, c:55 },
+  { label:'Beef mince & sweet potato', detail:'200g lean beef mince 5% fat (raw, ~144g cooked); 250g sweet potato (cooked); green beans', p:45, f:8, c:55 },
+  { label:'Salmon & new potatoes', detail:'200g salmon (raw, ~164g cooked); 250g new potatoes (cooked); asparagus', p:45, f:8, c:55 },
+  { label:'Steak & jacket potato', detail:'200g lean steak (raw, ~144g cooked); 250g jacket potato (cooked); broccoli', p:45, f:8, c:55 },
+  { label:'Turkey mince chilli & rice', detail:'200g turkey mince (raw, ~150g cooked) chilli; 250g rice (cooked); kidney beans & peppers', p:45, f:8, c:55 },
+];
+
+const EXERCISE_PLANS = {
+  0: [ // Monday — Upper Body A
+    { name:'Barbell Bench Press', target:'4x6-8' },
+    { name:'Pull-ups (or lat pulldown)', target:'4x6-8' },
+    { name:'Overhead Press', target:'3x8-10' },
+    { name:'Barbell Row', target:'3x8-10' },
+    { name:'Face Pulls', target:'3x12-15' },
+    { name:'Bicep Curls', target:'2x12' },
+  ],
+  1: [ // Tuesday — Lower Body A
+    { name:'Barbell Back Squat', target:'4x6-8' },
+    { name:'Romanian Deadlift', target:'3x8-10' },
+    { name:'Leg Press', target:'3x10-12' },
+    { name:'Walking Lunges', target:'2x12/leg' },
+    { name:'Standing Calf Raises', target:'3x15' },
+  ],
+  3: [ // Thursday — Upper Body B
+    { name:'Incline Dumbbell Press', target:'4x10-12' },
+    { name:'Seated Cable Row', target:'4x10-12' },
+    { name:'Lateral Raises', target:'3x12-15' },
+    { name:'Rear Delt Fly', target:'3x12-15' },
+    { name:'Tricep Pushdown', target:'3x12' },
+    { name:'Hammer Curls', target:'3x12' },
+  ],
+  4: [ // Friday — Lower Body B
+    { name:'Deadlift (conventional/trap bar)', target:'4x6-8' },
+    { name:'Bulgarian Split Squats', target:'3x10/leg' },
+    { name:'Leg Curls', target:'3x12' },
+    { name:'Hip Thrust', target:'3x10-12' },
+    { name:'Seated Calf Raise', target:'3x15' },
+  ],
+};
+
+const WORKOUT_OPTIONS = [
+  { label:'Upper Body A (Strength)', main:'Upper Body A (Strength)', cardio:null, abs:true, exercises:0 },
+  { label:'Lower Body A (Strength)', main:'Lower Body A (Strength)', cardio:'LISS 20 min (post-lift)', abs:false, exercises:1 },
+  { label:'HIIT (20 min)', main:'HIIT (20 min)', cardio:null, abs:true, exercises:null },
+  { label:'Upper Body B (Hypertrophy)', main:'Upper Body B (Hypertrophy)', cardio:null, abs:true, exercises:3 },
+  { label:'Lower Body B (Hypertrophy)', main:'Lower Body B (Hypertrophy)', cardio:'LISS 20 min (post-lift)', abs:false, exercises:4 },
+  { label:'HIIT (15-20 min)', main:'HIIT (15-20 min)', cardio:null, abs:true, exercises:null },
+  { label:'Rest / Active Recovery', main:null, cardio:'Walk 30-45 min', abs:false, exercises:null },
+];
+
+const DAY_PLANS = [
+  { name:'Monday', short:'Mon', defaultWorkout:0, defaultLunch:0, defaultDinner:0 },
+  { name:'Tuesday', short:'Tue', defaultWorkout:1, defaultLunch:1, defaultDinner:1 },
+  { name:'Wednesday', short:'Wed', defaultWorkout:2, defaultLunch:2, defaultDinner:2 },
+  { name:'Thursday', short:'Thu', defaultWorkout:3, defaultLunch:3, defaultDinner:3 },
+  { name:'Friday', short:'Fri', defaultWorkout:4, defaultLunch:4, defaultDinner:4 },
+  { name:'Saturday', short:'Sat', defaultWorkout:5, defaultLunch:0, defaultDinner:0 },
+  { name:'Sunday', short:'Sun', defaultWorkout:6, defaultLunch:0, defaultDinner:0 },
+];
+function resolveWorkout(entry, dayIdx){
+  const idx = getChoice(entry, 'workout', DAY_PLANS[dayIdx].defaultWorkout);
+  return WORKOUT_OPTIONS[idx];
+}
+const PREPOST = '1 scoop vegan protein + small banana + 15g peanut butter';
+const SNACK = '220g cottage cheese + 20g almonds';
+
+function pad(n){ return n<10 ? '0'+n : ''+n; }
+function toKey(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function mondayOf(d){
+  const date = new Date(d);
+  const day = date.getDay(); // 0 Sun..6 Sat
+  const diff = (day === 0 ? -6 : 1 - day);
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtShort(d){ return d.toLocaleDateString('en-GB',{ day:'numeric', month:'short' }); }
+
+function emptyEntry(){
+  return { weight:null, meals:{breakfast:false,lunch:false,prepost:false,dinner:false,snack:false},
+    training:{main:false,cardio:false,abs:false,steps:false}, notes:'', mealChoice:{}, lifts:{} };
+}
+function getChoice(entry, field, defaultIndex){
+  if(entry && entry.mealChoice && typeof entry.mealChoice[field] === 'number') return entry.mealChoice[field];
+  return defaultIndex;
+}
+function getLastLift(selectedDateObj, exerciseName){
+  for(let w=1; w<=3; w++){
+    const d = addDays(selectedDateObj, -7*w);
+    const key = toKey(d);
+    const e = state.entries[key];
+    if(e && e.lifts && e.lifts[exerciseName] && (e.lifts[exerciseName].weight!=null || e.lifts[exerciseName].reps!=null)){
+      return e.lifts[exerciseName];
+    }
+  }
+  return null;
+}
+
+function isComplete(entry, plan){
+  if(!entry) return false;
+  const m = entry.meals, t = entry.training;
+  if(!(m.breakfast&&m.lunch&&m.prepost&&m.dinner&&m.snack)) return false;
+  if(plan.main && !t.main) return false;
+  if(plan.cardio && !t.cardio) return false;
+  if(plan.abs && !t.abs) return false;
+  if(!t.steps) return false;
+  return true;
+}
+function anyChecked(entry){
+  if(!entry) return false;
+  const m = entry.meals, t = entry.training;
+  return m.breakfast||m.lunch||m.prepost||m.dinner||m.snack||t.main||t.cardio||t.abs||t.steps||!!entry.weight;
+}
+
+const state = {
+  today: new Date(),
+  weekOffset: 0,
+  selectedKey: null,
+  entries: {},   // dateKey -> entry (current week, 21-day history overlap)
+  loading: true,
+};
+state.today.setHours(0,0,0,0);
+
+async function loadEntry(key){
+  try{
+    const res = await window.storage.get('log:'+key, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      if(!parsed.mealChoice) parsed.mealChoice = {};
+      if(!parsed.lifts) parsed.lifts = {};
+      return parsed;
+    }
+    return null;
+  }catch(e){ return null; }
+}
+async function saveEntry(key, entry){
+  try{
+    await window.storage.set('log:'+key, JSON.stringify(entry), false);
+  }catch(e){ console.error('save failed', e); }
+}
+
+async function loadHistoryAndWeek(){
+  // last 21 days for streak + sparkline
+  const historyKeys = [];
+  for(let i=0;i<21;i++){ historyKeys.push(toKey(addDays(state.today, -i))); }
+  const monday = addDays(mondayOf(state.today), state.weekOffset*7);
+  const weekKeys = [];
+  for(let i=0;i<7;i++){ weekKeys.push(toKey(addDays(monday,i))); }
+  const allKeys = Array.from(new Set([...historyKeys, ...weekKeys]));
+  const results = await Promise.all(allKeys.map(k => loadEntry(k)));
+  allKeys.forEach((k,i) => { state.entries[k] = results[i]; });
+  return { monday, weekKeys };
+}
+
+function computeStreak(){
+  let streak = 0;
+  for(let i=0;i<21;i++){
+    const d = addDays(state.today, -i);
+    const key = toKey(d);
+    const weekday = (d.getDay()+6)%7; // 0=Mon
+    const entry = state.entries[key];
+    const plan = resolveWorkout(entry, weekday);
+    if(isComplete(entry, plan)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function sparklineSVG(){
+  const pts = [];
+  for(let i=20;i>=0;i--){
+    const d = addDays(state.today, -i);
+    const key = toKey(d);
+    const entry = state.entries[key];
+    if(entry && typeof entry.weight === 'number') pts.push({ x:20-i, w:entry.weight });
+  }
+  if(pts.length < 2){
+    return { svg:'<div class="sparkfoot" style="justify-content:center;padding:20px 0;">Log weight on 2+ days to see your trend</div>', first:null, last:null };
+  }
+  const weights = pts.map(p=>p.w);
+  const min = Math.min(...weights), max = Math.max(...weights);
+  const range = (max-min) || 1;
+  const w = 300, h = 60, pad = 6;
+  const xs = pts.map((p,i)=> pad + (i/(pts.length-1))*(w-2*pad));
+  const ys = pts.map(p=> h-pad - ((p.w-min)/range)*(h-2*pad));
+  let path = 'M'+xs[0]+','+ys[0];
+  for(let i=1;i<xs.length;i++) path += ' L'+xs[i]+','+ys[i];
+  const dots = xs.map((x,i)=>'<circle cx="'+x+'" cy="'+ys[i]+'" r="2.5" fill="#F06E1D"/>').join('');
+  const svg = '<svg width="100%" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'
+    +'<path d="'+path+'" fill="none" stroke="#F06E1D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + dots + '</svg>';
+  return { svg, first: pts[0].w, last: pts[pts.length-1].w };
+}
+
+function checkIcon(){
+  return '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9 17.5L20 6.5" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+async function toggleMeal(key, field){
+  const entry = state.entries[key] || emptyEntry();
+  entry.meals[field] = !entry.meals[field];
+  state.entries[key] = entry;
+  render();
+  await saveEntry(key, entry);
+}
+async function toggleTraining(key, field){
+  const entry = state.entries[key] || emptyEntry();
+  entry.training[field] = !entry.training[field];
+  state.entries[key] = entry;
+  render();
+  await saveEntry(key, entry);
+}
+async function onMealChoiceChange(key, field, value){
+  const entry = state.entries[key] || emptyEntry();
+  if(!entry.mealChoice) entry.mealChoice = {};
+  entry.mealChoice[field] = parseInt(value, 10);
+  state.entries[key] = entry;
+  render();
+  await saveEntry(key, entry);
+}
+async function onWorkoutChoiceChange(key, value){
+  const entry = state.entries[key] || emptyEntry();
+  if(!entry.mealChoice) entry.mealChoice = {};
+  entry.mealChoice['workout'] = parseInt(value, 10);
+  state.entries[key] = entry;
+  render();
+  await saveEntry(key, entry);
+}
+const liftDebounceTimers = {};
+function onLiftInput(key, exerciseName, field, value){
+  const entry = state.entries[key] || emptyEntry();
+  if(!entry.lifts) entry.lifts = {};
+  if(!entry.lifts[exerciseName]) entry.lifts[exerciseName] = { weight:null, reps:null };
+  entry.lifts[exerciseName][field] = value === '' ? null : parseFloat(value);
+  state.entries[key] = entry;
+  const timerKey = key+'|'+exerciseName+'|'+field;
+  clearTimeout(liftDebounceTimers[timerKey]);
+  liftDebounceTimers[timerKey] = setTimeout(async ()=>{
+    await saveEntry(key, entry);
+    render();
+  }, 600);
+}
+let weightDebounce = null;
+function onWeightInput(key, value){
+  const entry = state.entries[key] || emptyEntry();
+  entry.weight = value === '' ? null : parseFloat(value);
+  state.entries[key] = entry;
+  clearTimeout(weightDebounce);
+  weightDebounce = setTimeout(async ()=> {
+    await saveEntry(key, entry);
+    render();
+  }, 600);
+}
+let notesDebounce = null;
+function onNotesInput(key, value){
+  const entry = state.entries[key] || emptyEntry();
+  entry.notes = value;
+  state.entries[key] = entry;
+  clearTimeout(notesDebounce);
+  notesDebounce = setTimeout(()=> saveEntry(key, entry), 500);
+}
+
+async function clearAll(){
+  if(!confirm('Clear all logged data? This cannot be undone.')) return;
+  try{
+    const list = await window.storage.list('log:', false);
+    if(list && list.keys){
+      await Promise.all(list.keys.map(k => window.storage.delete(k, false)));
+    }
+  }catch(e){ console.error(e); }
+  state.entries = {};
+  render();
+}
+
+function weekLabel(monday){
+  const sunday = addDays(monday,6);
+  return fmtShort(monday) + ' \u2013 ' + fmtShort(sunday);
+}
+
+let currentMonday = null;
+let currentWeekKeys = [];
+
+async function goWeek(delta){
+  state.weekOffset += delta;
+  state.loading = true;
+  render();
+  try{
+    const { monday, weekKeys } = await loadHistoryAndWeek();
+    currentMonday = monday;
+    currentWeekKeys = weekKeys;
+    const todayKey = toKey(state.today);
+    state.selectedKey = weekKeys.includes(todayKey) ? todayKey : weekKeys[0];
+    state.loading = false;
+    render();
+  }catch(e){
+    state.weekOffset -= delta;
+    state.loading = false;
+    render();
+  }
+}
+
+function selectDay(key){
+  state.selectedKey = key;
+  render();
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(state.loading){
+    app.innerHTML = '<div class="loading">Loading your ledger&hellip;</div>';
+    return;
+  }
+  const streak = computeStreak();
+  const spark = sparklineSVG();
+
+  let html = '';
+  html += '<p class="eyebrow">Fat Loss Program &middot; Daily Log</p>';
+  html += '<h1 class="title">CUT LEDGER</h1>';
+  html += '<p class="subtitle">Tick it off, weigh in, keep the streak alive.</p>';
+
+  const canGoForward = state.weekOffset < 0;
+  html += '<div class="weeknav">';
+  html += '<button onclick="goWeek(-1)">&larr; Prev</button>';
+  html += '<span class="weeklabel">'+weekLabel(currentMonday).toUpperCase()+(state.weekOffset===0?' &middot; THIS WEEK':'')+'</span>';
+  html += '<button onclick="goWeek(1)" '+(canGoForward?'':'disabled')+'>Next &rarr;</button>';
+  html += '</div>';
+
+  html += '<div class="daytabs">';
+  currentWeekKeys.forEach((key,i) => {
+    const d = addDays(currentMonday, i);
+    const dayMeta = DAY_PLANS[i];
+    const entry = state.entries[key];
+    const resolvedPlan = resolveWorkout(entry, i);
+    const complete = isComplete(entry, resolvedPlan);
+    const partial = !complete && anyChecked(entry);
+    const active = key === state.selectedKey;
+    const isToday = key === toKey(state.today);
+    html += '<div class="daytab'+(active?' active':'')+'" onclick="selectDay(\''+key+'\')" style="'+(isToday?'border-color:#000;':'')+'">'
+      + (complete?'<div class="stampmini">&#10003;</div>':'')
+      + '<span class="dname">'+dayMeta.short+'</span>'
+      + '<span class="dnum">'+d.getDate()+'</span>'
+      + '<div class="dot'+(complete?' full':partial?' partial':'')+'"></div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  const selIdx = currentWeekKeys.indexOf(state.selectedKey);
+  const dayMeta = DAY_PLANS[selIdx];
+  const entry = state.entries[state.selectedKey] || emptyEntry();
+  const workoutIdx = getChoice(entry, 'workout', dayMeta.defaultWorkout);
+  const plan = WORKOUT_OPTIONS[workoutIdx];
+  const complete = isComplete(entry, plan);
+  const d = addDays(currentMonday, selIdx);
+
+  html += '<div class="panel">';
+  if(complete) html += '<div class="stamp">LOGGED</div>';
+  html += '<p class="daytitle">'+dayMeta.name+' &middot; '+fmtShort(d)+'</p>';
+  html += '<div class="workoutswap">';
+  html += '<select class="workoutselect" onchange="onWorkoutChoiceChange(\''+state.selectedKey+'\',this.value)">';
+  WORKOUT_OPTIONS.forEach((opt,i) => {
+    html += '<option value="'+i+'" '+(i===workoutIdx?'selected':'')+'>'+opt.label+'</option>';
+  });
+  html += '</select>';
+  if(workoutIdx !== dayMeta.defaultWorkout){
+    html += '<span class="swapbadge">swapped from '+WORKOUT_OPTIONS[dayMeta.defaultWorkout].label+'</span>';
+  }
+  html += '</div>';
+  html += '<p class="dayplan">'+(plan.abs?'+ Abs finisher':'')+(plan.cardio?' + '+plan.cardio:'')+'</p>';
+
+  // Weight
+  html += '<div class="section-label">Weigh-in</div>';
+  html += '<div class="weightrow">';
+  html += '<input type="number" step="0.1" placeholder="--" value="'+(entry.weight!=null?entry.weight:'')+'" oninput="onWeightInput(\''+state.selectedKey+'\', this.value)" />';
+  html += '<span class="weightunit">lbs</span>';
+  html += '<span class="trend" id="trendspan"></span>';
+  html += '</div>';
+
+  // Nutrition
+  html += '<div class="section-label">Nutrition</div>';
+  html += '<div class="checklist">';
+  html += mealItemWithChoice(state.selectedKey,'breakfast','Breakfast', BREAKFAST_OPTIONS, getChoice(entry,'breakfast',0), entry.meals.breakfast);
+  html += mealItemWithChoice(state.selectedKey,'lunch','Lunch', LUNCH_OPTIONS, getChoice(entry,'lunch',dayMeta.defaultLunch), entry.meals.lunch);
+  html += mealItem(state.selectedKey,'prepost','Pre/Post workout', PREPOST, entry.meals.prepost);
+  html += mealItemWithChoice(state.selectedKey,'dinner','Dinner', DINNER_OPTIONS, getChoice(entry,'dinner',dayMeta.defaultDinner), entry.meals.dinner);
+  html += mealItem(state.selectedKey,'snack','Snack / Flex', SNACK, entry.meals.snack);
+  html += '</div>';
+
+  // Training
+  html += '<div class="section-label">Training</div>';
+  html += '<div class="checklist">';
+  if(plan.main){
+    html += trainItem(state.selectedKey,'main', plan.main, 'Main session', entry.training.main);
+    if(plan.exercises != null && EXERCISE_PLANS[plan.exercises]) html += renderExerciseLog(state.selectedKey, d, EXERCISE_PLANS[plan.exercises], entry);
+  }
+  if(plan.cardio) html += trainItem(state.selectedKey,'cardio', plan.cardio, 'Cardio / conditioning', entry.training.cardio);
+  if(plan.abs) html += trainItem(state.selectedKey,'abs', 'Abs finisher', 'Direct core work', entry.training.abs);
+  html += trainItem(state.selectedKey,'steps', '8,000\u201310,000 steps', 'Daily movement goal', entry.training.steps);
+  html += '</div>';
+
+  html += '<div class="section-label">Notes</div>';
+  html += '<textarea placeholder="How did today feel? Energy, sleep, cravings, PRs..." oninput="onNotesInput(\''+state.selectedKey+'\', this.value)">'+ (entry.notes||'') +'</textarea>';
+  html += '<div style="height:16px;"></div>';
+  html += '</div>';
+
+  // Footer: streak + sparkline
+  html += '<div class="footerrow">';
+  html += '<div class="card">';
+  html += '<div class="streaknum">'+streak+'</div>';
+  html += '<div class="cardlabel">day streak, fully logged</div>';
+  html += '</div>';
+  html += '<div class="card sparkwrap">';
+  html += '<div class="cardlabel" style="margin-bottom:8px;">Weight trend &middot; last 21 days</div>';
+  html += spark.svg;
+  if(spark.first!=null){
+    const diff = (spark.last-spark.first).toFixed(1);
+    html += '<div class="sparkfoot"><span>'+spark.first+' lbs</span><span>'+(diff>0?'+':'')+diff+' lbs</span><span>'+spark.last+' lbs</span></div>';
+  }
+  html += '</div>';
+  html += '</div>';
+
+  html += '<div class="resetrow"><button onclick="clearAll()">Clear all data</button></div>';
+
+  app.innerHTML = html;
+
+  // trend arrow calc (previous logged day before selected)
+  const trendEl = document.getElementById('trendspan');
+  if(trendEl && entry.weight!=null){
+    let prevWeight = null;
+    for(let i=1;i<=30;i++){
+      const pd = addDays(d, -i);
+      const pk = toKey(pd);
+      const pe = state.entries[pk];
+      if(pe && typeof pe.weight === 'number'){ prevWeight = pe.weight; break; }
+    }
+    if(prevWeight!=null){
+      const delta = (entry.weight - prevWeight).toFixed(1);
+      trendEl.className = 'trend '+(delta<0?'down':delta>0?'up':'');
+      trendEl.textContent = (delta>0?'+':'')+delta+' lbs vs last log';
+    }
+  }
+}
+
+function mealItem(key, field, title, sub, checked){
+  return '<div class="item'+(checked?' checked':'')+'" onclick="toggleMeal(\''+key+'\',\''+field+'\')">'
+    + '<div class="box">'+checkIcon()+'</div>'
+    + '<div class="itemtext"><div class="itemtitle">'+title+'</div><div class="itemsub">'+sub+'</div></div>'
+    + '</div>';
+}
+function mealItemWithChoice(key, field, title, options, choiceIdx, checked){
+  const chosen = options[choiceIdx] || options[0];
+  let selectHtml = '<select class="swapselect" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();onMealChoiceChange(\''+key+'\',\''+field+'\',this.value)">';
+  options.forEach((opt,i) => {
+    selectHtml += '<option value="'+i+'" '+(i===choiceIdx?'selected':'')+'>'+opt.label+'</option>';
+  });
+  selectHtml += '</select>';
+  return '<div class="item'+(checked?' checked':'')+'" onclick="toggleMeal(\''+key+'\',\''+field+'\')">'
+    + '<div class="box">'+checkIcon()+'</div>'
+    + '<div class="itemtext">'
+      + '<div class="itemtitle">'+title+'</div>'
+      + '<div class="itemsub">'+chosen.detail+' &middot; '+chosen.p+'P/'+chosen.f+'F/'+chosen.c+'C</div>'
+      + '<div class="swaprow">'+selectHtml+'</div>'
+    + '</div>'
+    + '</div>';
+}
+function trainItem(key, field, title, sub, checked){
+  return '<div class="item'+(checked?' checked':'')+'" onclick="toggleTraining(\''+key+'\',\''+field+'\')">'
+    + '<div class="box">'+checkIcon()+'</div>'
+    + '<div class="itemtext"><div class="itemtitle">'+title+'</div><div class="itemsub">'+sub+'</div></div>'
+    + '</div>';
+}
+function renderExerciseLog(key, selectedDateObj, exercises, entry){
+  let html = '<div class="exerciseblock">';
+  exercises.forEach(ex => {
+    const logged = (entry.lifts && entry.lifts[ex.name]) || { weight:null, reps:null };
+    const last = getLastLift(selectedDateObj, ex.name);
+    const lastText = last ? ('last: '+(last.weight!=null?last.weight+'kg':'--')+' \u00d7 '+(last.reps!=null?last.reps:'--')) : 'first time logging this';
+    html += '<div class="exerciserow">'
+      + '<div class="exercisemeta"><div class="exercisename">'+ex.name+'</div><div class="exercisetarget">Target '+ex.target+'</div></div>'
+      + '<div class="exerciseinputs">'
+        + '<input class="liftinput" type="number" step="2.5" placeholder="--" value="'+(logged.weight!=null?logged.weight:'')+'" oninput="onLiftInput(\''+key+'\',\''+ex.name.replace(/'/g,"\\'")+'\',\'weight\',this.value)" />'
+        + '<span class="liftx">kg &times;</span>'
+        + '<input class="liftinput" type="number" step="1" placeholder="--" value="'+(logged.reps!=null?logged.reps:'')+'" oninput="onLiftInput(\''+key+'\',\''+ex.name.replace(/'/g,"\\'")+'\',\'reps\',this.value)" />'
+        + '<span class="liftx">reps</span>'
+      + '</div>'
+      + '<div class="liftlast">'+lastText+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+function renderFooter(){ render(); }
+
+(async function init(){
+  const failSafe = setTimeout(() => {
+    if(state.loading){
+      document.getElementById('app').innerHTML =
+        '<div class="loading">This is taking longer than expected.<br/><br/>'
+        + '<button onclick="location.reload()" style="font-family:var(--font-mono);font-size:13px;padding:8px 16px;border:1px solid #000;border-radius:8px;background:#fff;cursor:pointer;">Reload</button></div>';
+    }
+  }, 6000);
+  try{
+    const { monday, weekKeys } = await loadHistoryAndWeek();
+    currentMonday = monday;
+    currentWeekKeys = weekKeys;
+    const todayKey = toKey(state.today);
+    state.selectedKey = weekKeys.includes(todayKey) ? todayKey : weekKeys[0];
+    state.loading = false;
+    clearTimeout(failSafe);
+    render();
+  }catch(e){
+    clearTimeout(failSafe);
+    document.getElementById('app').innerHTML =
+      '<div class="loading">Something went wrong loading the ledger.<br/>'+String(e.message||e)+'<br/><br/>'
+      + '<button onclick="location.reload()" style="font-family:var(--font-mono);font-size:13px;padding:8px 16px;border:1px solid #000;border-radius:8px;background:#fff;cursor:pointer;">Reload</button></div>';
+  }
+})();
+</script>
+</body>
+</html>
